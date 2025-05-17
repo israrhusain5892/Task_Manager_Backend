@@ -4,6 +4,7 @@ const express = require("express");
 const connectDB = require("./config/db");
 const cors = require("cors");
 const {authenticateUser}=require("./middleWare/authMiddleWare");
+const activityRoutes = require('./routes/activityRoutes');
 const app = express();
 connectDB();
 
@@ -15,7 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/tasks", authenticateUser, require("./routes/taskRoutes"));
 app.use("/",authenticateUser,require("./routes/notificationRoutes"))
-
+app.use('/api',authenticateUser, activityRoutes);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

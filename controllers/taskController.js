@@ -1,18 +1,19 @@
 const Task = require("../models/Task");
 const User = require("../models/User");
+const Activity = require('../models/Activity');
 // we will write all crud operations of task here
 // Create a new task
 exports.createTask = async (req, res) => {
-    try {
-        const { title, description, dueDate, priority, assignedTo } = req.body;
-        const task = new Task({
-            title,
-            description,
-            dueDate,
-            priority,
-            createdBy: req.user._id, // Set the task creator to the logged-in user
-            assignedTo: assignedTo || null
-        });
+  try {
+    const { title, description, dueDate, priority, assignedTo } = req.body;
+    const task = new Task({
+      title,
+      description,
+      dueDate,
+      priority,
+      createdBy: req.user._id, // Set the task creator to the logged-in user
+      assignedTo: assignedTo || null
+    });
 
     const io = req.app.get("io");
 
@@ -32,86 +33,106 @@ exports.createTask = async (req, res) => {
       });
     }
 
-        await task.save();
-        res.status(201).json(task);
-    } catch (err) {
-        res.status(500).json({ message: "Server error", error: err.message });
-    }
+    const savedTask=await task.save();
+    // Create activity
+    const activity = new Activity({
+      userId:req.user._id,
+      action: 'created task'+savedTask.title,
+      taskId: savedTask._id,
+    });
+    await activity.save();
+    res.status(201).json(task,activity);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 };
 
 // Get all tasks assigned to the current user
 exports.getTasks = async (req, res) => {
-  
-    try {
-        let tasks;
 
-        if (req.user.role === 'admin') {
-            // Admin gets all tasks
-            tasks = await Task.find({});
-        } else {
-            // Regular user gets only tasks created by or assigned to them
-            tasks = await Task.find({
-                $or: [
-                    { createdBy: req.user._id },
-                    { assignedTo: req.user._id }
-                ]
-            });
-        }
+  try {
+    let tasks;
 
-        res.json(tasks);
-    } catch (err) {
-        res.status(500).json({ message: "Server error", error: err.message });
+    if (req.user.role === 'admin') {
+      // Admin gets all tasks
+      tasks = await Task.find({});
+    } else {
+      // Regular user gets only tasks created by or assigned to them
+      tasks = await Task.find({
+        $or: [
+          { createdBy: req.user._id },
+          { assignedTo: req.user._id }
+        ]
+      });
     }
+
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 };
 
 
 
 // Get a specific task by ID
 exports.getTaskById = async (req, res) => {
-    try {
-        const task = await Task.findById(req.params.id);
-        if (!task) {
-            return res.status(404).json({ message: "Task not found" });
-        }
-        res.json(task);
-    } catch (err) {
-        res.status(500).json({ message: "Server error", error: err.message });
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
     }
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 };
 
 // Update task status or other fields
 exports.updateTask = async (req, res) => {
-    try {
-        const task = await Task.findById(req.params.id);
-        if (!task) {
-            return res.status(404).json({ message: "Task not found" });
-        }
-
-        // Only allow task updates if the current user is the creator or assigned
-        if (task.createdBy.toString() !== req.user._id.toString() && task.assignedTo.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: "Access denied" });
-        }
-
-        const { title, description, dueDate, priority, status, assignedTo } = req.body;
-        task.title = title || task.title;
-        task.description = description || task.description;
-        task.dueDate = dueDate || task.dueDate;
-        task.priority = priority || task.priority;
-        task.status = status || task.status;
-        task.assignedTo = assignedTo || task.assignedTo;
-
-        await task.save();
-        res.json(task);
-    } catch (err) {
-        res.status(500).json({ message: "Server error", error: err.message });
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
     }
+
+    // Only allow task updates if the current user is the creator or assigned
+    if (task.createdBy.toString() !== req.user._id.toString() && task.assignedTo.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const { title, description, dueDate, priority, status, assignedTo } = req.body;
+    task.title = title || task.title;
+    task.description = description || task.description;
+    task.dueDate = dueDate || task.dueDate;
+    task.priority = priority || task.priority;
+    task.status = status || task.status;
+    task.assignedTo = assignedTo || task.assignedTo;
+
+    const savedTask=await task.save();
+
+     const activity = new Activity({
+      userId:req.user._id,
+      action: 'Update task'+ savedTask.title,
+      taskId: savedTask._id,
+    });
+    await activity.save();
+    res.json(task,activity);
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 };
 
 // Delete a task
 exports.deleteTask = async (req, res) => {
-    try {
-    await Task.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Task deleted.' });
+  try {
+    const deletedTask=await Task.findByIdAndDelete(req.params.id);
+     const activity = new Activity({
+      userId:req.user._id,
+      action: 'Deleted Task'+deletedTask.title,
+      taskId: deletedTask._id,
+    });
+    await activity.save();
+    res.json({ message: 'Task deleted.' ,activity});
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }
@@ -161,8 +182,8 @@ exports.getTaskStatistics = async (req, res) => {
   }
 };
 
-exports.getTasksByStatus=async (req,res)=>{
-     const { status } = req.query;
+exports.getTasksByStatus = async (req, res) => {
+  const { status } = req.query;
 
   if (!status) {
     return res.status(400).json({ error: "Status query parameter is required" });
