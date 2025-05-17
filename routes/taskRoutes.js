@@ -1,5 +1,5 @@
 const express = require("express");
-const {createTask,getTaskById,updateTask,deleteTask,getTasks,getTaskStatistics } = require("../controllers/taskController");
+const {createTask,getTaskById,updateTask,deleteTask,getTasks,getTaskStatistics,getTasksByStatus } = require("../controllers/taskController");
 const router = express.Router();
 const { authenticateUser, authorizeRoles } = require("../middleWare/authMiddleWare");
 // Create a new task
@@ -20,4 +20,5 @@ router.delete("/:id",authenticateUser,authorizeRoles("admin","Manager"), deleteT
 // get task statistics
 router.get("/taskStatics",authenticateUser,authorizeRoles("admin","Manager"),getTaskStatistics);
 
+router.get("/status/get",authenticateUser,getTasksByStatus);
 module.exports = router;

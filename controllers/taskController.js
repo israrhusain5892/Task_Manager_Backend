@@ -110,21 +110,11 @@ exports.updateTask = async (req, res) => {
 // Delete a task
 exports.deleteTask = async (req, res) => {
     try {
-        const task = await Task.findById(req.params.id);
-        if (!task) {
-            return res.status(404).json({ message: "Task not found" });
-        }
-
-        // Only allow deletion if the current user is the creator
-        if (task.createdBy.toString() !== req.user._id.toString()) {
-            return res.status(403).json({ message: "Access denied" });
-        }
-
-        await task.remove();
-        res.json({ message: "Task deleted" });
-    } catch (err) {
-        res.status(500).json({ message: "Server error", error: err.message });
-    }
+    await Task.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Task deleted.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error.' });
+  }
 };
 
 // task statistics
@@ -170,3 +160,18 @@ exports.getTaskStatistics = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+exports.getTasksByStatus=async (req,res)=>{
+     const { status } = req.query;
+
+  if (!status) {
+    return res.status(400).json({ error: "Status query parameter is required" });
+  }
+
+  try {
+    const tasks = await Task.find({ status: status.toLowerCase() });
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ error: "Error fetching tasks" });
+  }
+}
