@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const Task = require('../models/Task');
 
 const generateToken = (user) => {
   return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -31,10 +32,37 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
     const token = generateToken(user);
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({ user: { id: user._id, name: user.name, email: user.email, role: user.role,token:token } });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+
+
+exports.getAllUsers=async (req,res)=>{
+     try {
+    // Fetch all users
+    const users = await User.find();
+
+    // For each user, fetch their tasks
+    const usersWithTasks = await Promise.all(
+      users.map(async (user) => {
+        const tasks = await Task.find({ assignedTo: user._id });
+        return {
+          user,
+          tasks
+        };
+      })
+    );
+
+    res.status(200).json(usersWithTasks);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+}
+
+
+
 
 
