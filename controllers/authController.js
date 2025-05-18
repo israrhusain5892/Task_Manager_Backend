@@ -50,8 +50,9 @@ exports.getAllUsers=async (req,res)=>{
       users.map(async (user) => {
         const tasks = await Task.find({ assignedTo: user._id });
         return {
-          user,
-          tasks
+           ...user.toObject(), // Convert Mongoose document to plain JS object
+          tasks,
+          
         };
       })
     );
