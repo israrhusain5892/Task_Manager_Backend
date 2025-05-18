@@ -12,7 +12,7 @@ router.get("/", authenticateUser,getTasks);
 router.get("/:id",authenticateUser, getTaskById);
 
 // Update a task (status, assigned user, etc.) protect rouite by admin role
-router.put("/:id",authenticateUser,authorizeRoles("admin"), updateTask);
+router.put("/:id",authenticateUser, updateTask);
 
 // Delete a task
 router.delete("/:id",authenticateUser,authorizeRoles("admin","Manager"), deleteTask);
